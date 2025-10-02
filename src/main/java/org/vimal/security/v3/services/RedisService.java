@@ -112,6 +112,33 @@ public class RedisService {
                 );
     }
 
+    public void addHashMember(String key,
+                              String member,
+                              String value,
+                              Duration timeToLive) {
+        redisTemplate.opsForHash()
+                .put(
+                        key,
+                        member,
+                        value
+                );
+        redisTemplate.opsForHash()
+                .expire(
+                        key,
+                        timeToLive,
+                        Set.of(member)
+                );
+    }
+
+    public void removeHashMember(String key,
+                                 String member) {
+        redisTemplate.opsForHash()
+                .delete(
+                        key,
+                        member
+                );
+    }
+
     public void flushDb() {
         Objects.requireNonNull(redisTemplate.getConnectionFactory())
                 .getConnection()

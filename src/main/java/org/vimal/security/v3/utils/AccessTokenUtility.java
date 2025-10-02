@@ -26,6 +26,8 @@ import org.vimal.security.v3.models.UserModel;
 import org.vimal.security.v3.repos.UserRepo;
 import org.vimal.security.v3.services.MailService;
 import org.vimal.security.v3.services.RedisService;
+import ua_parser.Client;
+import ua_parser.Parser;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -56,9 +58,11 @@ public class AccessTokenUtility {
             AlgorithmConstraints.ConstraintType.PERMIT,
             ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512
     );
+    private static final Parser USER_AGENT_PARSER = new Parser();
     private static final String X_DEVICE_ID_HEADER = "X-Device-ID";
     private static final String ACCESS_TOKEN_PREFIX = "SECURITY_V3_ACCESS_TOKEN:";
     private static final String USER_DEVICE_IDS_PREFIX = "SECURITY_V3_USER_DEVICE_IDS:";
+    private static final String USER_DEVICES_STATS_PREFIX = "SECURITY_V3_USER_DEVICES_STATS:";
     private static final String REFRESH_TOKEN_PREFIX = "SECURITY_V3_REFRESH_TOKEN:";
     private static final String REFRESH_TOKEN_USER_ID_MAPPING_PREFIX = "SECURITY_V3_REFRESH_TOKEN_USER_ID_MAPPING:";
     private static final String REFRESH_TOKEN_MAPPING_PREFIX = "SECURITY_V3_REFRESH_TOKEN_MAPPING:";
@@ -238,14 +242,16 @@ public class AccessTokenUtility {
                     now + ACCESS_TOKEN_EXPIRES_IN_MILLI_SECONDS,
                     REFRESH_TOKEN_EXPIRES_IN_DURATION
             );
-            if (newSignIn != null && newSignIn && unleash.isEnabled(EMAIL_CONFIRMATION_ON_NEW_SIGN_IN.name())) {
-                mailService.sendEmailAsync(
-                        genericAesStaticEncryptorDecryptor.decrypt(user.getEmail()),
-                        "New Sign In Detected",
-                        "",
-                        NEW_SIGN_IN_CONFIRMATION
-                );
-            }
+            sendEmailConfirmationOnNewSignIn(
+                    newSignIn,
+                    user
+            );
+            addDeviceStats(
+                    user,
+                    encryptedDeviceId,
+                    request,
+                    now
+            );
             String encryptedAccessToken = encryptToken(signToken(buildTokenClaims(
                     user,
                     request
@@ -257,11 +263,10 @@ public class AccessTokenUtility {
             );
             accessToken.put("access_token", encryptedAccessToken);
             accessToken.put("expires_in_seconds", ACCESS_TOKEN_EXPIRES_IN_SECONDS);
-            accessToken.put("token_type", "Bearer");
-            return accessToken;
+        } else {
+            accessToken.put("access_token", genericAesRandomEncryptorDecryptor.decrypt(redisService.get(encryptedAccessTokenKey)));
+            accessToken.put("expires_in_seconds", redisService.getTtl(encryptedAccessTokenKey));
         }
-        accessToken.put("access_token", genericAesRandomEncryptorDecryptor.decrypt(redisService.get(encryptedAccessTokenKey)));
-        accessToken.put("expires_in_seconds", redisService.getTtl(encryptedAccessTokenKey));
         accessToken.put("token_type", "Bearer");
         return accessToken;
     }
@@ -311,6 +316,58 @@ public class AccessTokenUtility {
     private String getEncryptedAccessTokenKey(String userId,
                                               String deviceId) throws Exception {
         return genericAesStaticEncryptorDecryptor.encrypt(ACCESS_TOKEN_PREFIX + userId + ":" + deviceId);
+    }
+
+    private void sendEmailConfirmationOnNewSignIn(Boolean newSignIn,
+                                                  UserModel user) throws Exception {
+
+        if (newSignIn != null && newSignIn && unleash.isEnabled(EMAIL_CONFIRMATION_ON_NEW_SIGN_IN.name())) {
+            mailService.sendEmailAsync(
+                    genericAesStaticEncryptorDecryptor.decrypt(user.getEmail()),
+                    "New Sign In Detected",
+                    "",
+                    NEW_SIGN_IN_CONFIRMATION
+            );
+        }
+    }
+
+    private void addDeviceStats(UserModel user,
+                                String encryptedDeviceId,
+                                HttpServletRequest request,
+                                long now) throws Exception {
+        Client client = USER_AGENT_PARSER.parse(request.getHeader("User-Agent"));
+        StringBuilder deviceInfo = new StringBuilder();
+        deviceInfo.append(client.device)
+                .append(";")
+                .append(client.os)
+                .append(";")
+                .append(client.userAgent);
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isBlank()) {
+            ipAddress = request.getRemoteAddr();
+        }
+        deviceInfo.append(";")
+                .append(ipAddress);
+        deviceInfo.append(";")
+                .append(now);
+        redisService.addHashMember(
+                getEncryptedDeviceStatsKey(user),
+                encryptedDeviceId,
+                genericAesRandomEncryptorDecryptor.encrypt(deviceInfo.toString()),
+                REFRESH_TOKEN_EXPIRES_IN_DURATION
+        );
+    }
+
+    private String getEncryptedDeviceStatsKey(UserModel user) throws Exception {
+        return getEncryptedDeviceStatsKey(user.getId());
+    }
+
+    private String getEncryptedDeviceStatsKey(UUID userId) throws Exception {
+        return getEncryptedDeviceStatsKey(userId.toString());
+    }
+
+    private String getEncryptedDeviceStatsKey(String userId) throws Exception {
+        return genericAesStaticEncryptorDecryptor.encrypt(USER_DEVICES_STATS_PREFIX + userId);
     }
 
     public Map<String, Object> generateTokens(UserModel user,
@@ -437,9 +494,14 @@ public class AccessTokenUtility {
                 request
         );
         keys.add(encryptedAccessTokenKey);
+        String encryptedDeviceId = genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER));
         redisService.removeZSetMember(
                 getEncryptedDeviceIdsKey(user),
-                genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER))
+                encryptedDeviceId
+        );
+        redisService.removeHashMember(
+                getEncryptedDeviceStatsKey(user),
+                encryptedDeviceId
         );
         String encryptedRefreshTokenKey = getEncryptedRefreshTokenKey(
                 user,
@@ -476,6 +538,7 @@ public class AccessTokenUtility {
                             Set<String> encryptedRefreshTokenKeys) throws Exception {
         String tempStr = getEncryptedDeviceIdsKey(userId);
         encryptedKeys.add(tempStr);
+        encryptedKeys.add(getEncryptedDeviceStatsKey(userId));
         Set<String> members = redisService.getAllZSetMembers(tempStr);
         if (members != null && !members.isEmpty()) {
             for (String encryptedDeviceId : members) {
