@@ -1150,7 +1150,7 @@ public class UserService {
         );
     }
 
-    public Map<Object, Object> getActiveSessions(HttpServletRequest request) throws Exception {
+    public Map<Object, Object> getActiveDevices(HttpServletRequest request) throws Exception {
         Map<Object, Object> response = redisService.getAllHashMembers(accessTokenUtility.getEncryptedDeviceStatsKey(getCurrentAuthenticatedUser()));
         for (Map.Entry<Object, Object> entry : response.entrySet()) {
             entry.setValue(genericAesRandomEncryptorDecryptor.decrypt((String) entry.getValue()));

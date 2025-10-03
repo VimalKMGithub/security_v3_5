@@ -114,8 +114,8 @@ public class UserController {
         return userService.updateDetails(dto);
     }
 
-    @GetMapping("/active/sessions")
-    public ResponseEntity<Map<Object, Object>> getActiveSessions(HttpServletRequest request) throws Exception {
-        return ResponseEntity.ok(userService.getActiveSessions(request));
+    @GetMapping("/active/devices")
+    public ResponseEntity<Map<Object, Object>> getActiveDevices(HttpServletRequest request) throws Exception {
+        return ResponseEntity.ok(userService.getActiveDevices(request));
     }
 }
