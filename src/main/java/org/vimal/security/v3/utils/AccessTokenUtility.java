@@ -340,11 +340,29 @@ public class AccessTokenUtility {
                                 long now) throws Exception {
         Client client = USER_AGENT_PARSER.parse(request.getHeader("User-Agent"));
         StringBuilder deviceInfo = new StringBuilder();
-        deviceInfo.append(client.device)
+        deviceInfo.append(client.device.family)
                 .append(";")
-                .append(client.os)
-                .append(";")
-                .append(client.userAgent);
+                .append(client.os.family);
+        if (client.os.major != null) {
+            deviceInfo.append(" ").append(client.os.major);
+            if (client.os.minor != null) {
+                deviceInfo.append(".").append(client.os.minor);
+                if (client.os.patch != null) {
+                    deviceInfo.append(".").append(client.os.patch);
+                }
+            }
+        }
+        deviceInfo.append(";")
+                .append(client.userAgent.family);
+        if (client.userAgent.major != null) {
+            deviceInfo.append(" ").append(client.userAgent.major);
+            if (client.userAgent.minor != null) {
+                deviceInfo.append(".").append(client.userAgent.minor);
+                if (client.userAgent.patch != null) {
+                    deviceInfo.append(".").append(client.userAgent.patch);
+                }
+            }
+        }
         String ipAddress = request.getHeader("X-Forwarded-For");
         if (ipAddress == null || ipAddress.isBlank()) {
             ipAddress = request.getRemoteAddr();
