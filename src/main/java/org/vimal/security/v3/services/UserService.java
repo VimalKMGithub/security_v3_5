@@ -1155,7 +1155,7 @@ public class UserService {
         for (Map.Entry<Object, Object> entry : response.entrySet()) {
             entry.setValue(genericAesRandomEncryptorDecryptor.decrypt((String) entry.getValue()));
         }
-        response.put("current_session_device_id", genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER)));
+        response.put("current_device_id", genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER)));
         return response;
     }
 }
