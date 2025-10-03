@@ -340,8 +340,9 @@ public class AccessTokenUtility {
                                 long now) throws Exception {
         Client client = USER_AGENT_PARSER.parse(request.getHeader("User-Agent"));
         StringBuilder deviceInfo = new StringBuilder();
-        deviceInfo.append(client.device.family)
-                .append(";")
+        deviceInfo.append("Device=")
+                .append(client.device.family)
+                .append(";OS=")
                 .append(client.os.family);
         if (client.os.major != null) {
             deviceInfo.append(" ").append(client.os.major);
@@ -352,7 +353,7 @@ public class AccessTokenUtility {
                 }
             }
         }
-        deviceInfo.append(";")
+        deviceInfo.append(";Agent=")
                 .append(client.userAgent.family);
         if (client.userAgent.major != null) {
             deviceInfo.append(" ").append(client.userAgent.major);
@@ -367,9 +368,9 @@ public class AccessTokenUtility {
         if (ipAddress == null || ipAddress.isBlank()) {
             ipAddress = request.getRemoteAddr();
         }
-        deviceInfo.append(";")
+        deviceInfo.append(";IP=")
                 .append(ipAddress);
-        deviceInfo.append(";")
+        deviceInfo.append(";LastUsedAt=")
                 .append(now);
         redisService.addHashMember(
                 getEncryptedDeviceStatsKey(user),
