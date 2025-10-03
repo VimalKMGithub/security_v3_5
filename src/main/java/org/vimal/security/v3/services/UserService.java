@@ -1,6 +1,7 @@
 package org.vimal.security.v3.services;
 
 import io.getunleash.Unleash;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +24,7 @@ import static org.vimal.security.v3.enums.FeatureFlags.*;
 import static org.vimal.security.v3.enums.MailType.*;
 import static org.vimal.security.v3.enums.MfaType.AUTHENTICATOR_APP_MFA;
 import static org.vimal.security.v3.enums.MfaType.EMAIL_MFA;
+import static org.vimal.security.v3.utils.AccessTokenUtility.X_DEVICE_ID_HEADER;
 import static org.vimal.security.v3.utils.EmailUtility.normalizeEmail;
 import static org.vimal.security.v3.utils.MfaUtility.MFA_METHODS;
 import static org.vimal.security.v3.utils.MfaUtility.validateTypeExistence;
@@ -1146,5 +1148,11 @@ public class UserService {
                 shouldRemoveTokens,
                 invalidInputs
         );
+    }
+
+    public Map<Object, Object> getActiveSessions(HttpServletRequest request) throws Exception {
+        Map<Object, Object> response = redisService.getAllHashMembers(accessTokenUtility.getEncryptedDeviceStatsKey(getCurrentAuthenticatedUser()));
+        response.put("current_session_device_id", genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER)));
+        return response;
     }
 }

@@ -59,7 +59,7 @@ public class AccessTokenUtility {
             ContentEncryptionAlgorithmIdentifiers.AES_256_CBC_HMAC_SHA_512
     );
     private static final Parser USER_AGENT_PARSER = new Parser();
-    private static final String X_DEVICE_ID_HEADER = "X-Device-ID";
+    public static final String X_DEVICE_ID_HEADER = "X-Device-ID";
     private static final String ACCESS_TOKEN_PREFIX = "SECURITY_V3_ACCESS_TOKEN:";
     private static final String USER_DEVICE_IDS_PREFIX = "SECURITY_V3_USER_DEVICE_IDS:";
     private static final String USER_DEVICES_STATS_PREFIX = "SECURITY_V3_USER_DEVICES_STATS:";
@@ -361,7 +361,7 @@ public class AccessTokenUtility {
         );
     }
 
-    private String getEncryptedDeviceStatsKey(UserModel user) throws Exception {
+    public String getEncryptedDeviceStatsKey(UserModel user) throws Exception {
         return getEncryptedDeviceStatsKey(user.getId());
     }
 

@@ -1,5 +1,6 @@
 package org.vimal.security.v3.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -111,5 +112,10 @@ public class UserController {
     @PutMapping("/update/details")
     public ResponseEntity<Map<String, Object>> updateDetails(@RequestBody SelfUpdationDto dto) throws Exception {
         return userService.updateDetails(dto);
+    }
+
+    @GetMapping("/active/sessions")
+    public ResponseEntity<Map<Object, Object>> getActiveSessions(HttpServletRequest request) throws Exception {
+        return ResponseEntity.ok(userService.getActiveSessions(request));
     }
 }
