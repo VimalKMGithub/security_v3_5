@@ -221,8 +221,11 @@ public class AccessTokenUtility {
     }
 
     private Map<String, Object> generateAccessToken(UserModel user,
-                                                    HttpServletRequest request) throws Exception {
-        checkDeviceId(request);
+                                                    HttpServletRequest request,
+                                                    boolean deviceIdChecked) throws Exception {
+        if (!deviceIdChecked) {
+            checkDeviceId(request);
+        }
         String encryptedDeviceIdsKey = getEncryptedDeviceIdsKey(user);
         String encryptedDeviceId = genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER));
         Double score = redisService.getZSetMemberScore(
@@ -374,7 +377,8 @@ public class AccessTokenUtility {
                                               HttpServletRequest request) throws Exception {
         Map<String, Object> tokens = generateAccessToken(
                 user,
-                request
+                request,
+                false
         );
         tokens.put("refresh_token", generateRefreshToken(
                 user,
@@ -677,7 +681,8 @@ public class AccessTokenUtility {
                         refreshToken,
                         request
                 ),
-                request
+                request,
+                true
         );
     }
 }
