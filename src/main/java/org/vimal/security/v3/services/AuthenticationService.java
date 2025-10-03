@@ -192,6 +192,14 @@ public class AuthenticationService {
         return Map.of("message", "Logout successful");
     }
 
+    public Map<String, String> logoutFromDevices(Set<String> deviceIds) throws Exception {
+        accessTokenUtility.logoutFromDevices(
+                getCurrentAuthenticatedUser(),
+                deviceIds
+        );
+        return Map.of("message", "Logout from devices successful");
+    }
+
     public Map<String, String> logoutAllDevices() throws Exception {
         accessTokenUtility.revokeTokens(Set.of(getCurrentAuthenticatedUser()));
         return Map.of("message", "Logout from all devices successful");

@@ -3,13 +3,11 @@ package org.vimal.security.v3.controllers;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.vimal.security.v3.services.AuthenticationService;
 
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -32,6 +30,11 @@ public class AuthenticationController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) throws Exception {
         return ResponseEntity.ok(authenticationService.logout(request));
+    }
+
+    @PostMapping("/logout/fromDevices")
+    public ResponseEntity<Map<String, String>> logoutFromDevices(@RequestBody Set<String> deviceIds) throws Exception {
+        return ResponseEntity.ok(authenticationService.logoutFromDevices(deviceIds));
     }
 
     @PostMapping("/logout/allDevices")

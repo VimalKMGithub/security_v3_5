@@ -489,11 +489,10 @@ public class AccessTokenUtility {
     public void logout(UserModel user,
                        HttpServletRequest request) throws Exception {
         Set<String> keys = new HashSet<>();
-        String encryptedAccessTokenKey = getEncryptedAccessTokenKey(
+        keys.add(getEncryptedAccessTokenKey(
                 user,
                 request
-        );
-        keys.add(encryptedAccessTokenKey);
+        ));
         String encryptedDeviceId = genericAesStaticEncryptorDecryptor.encrypt(request.getHeader(X_DEVICE_ID_HEADER));
         redisService.removeZSetMember(
                 getEncryptedDeviceIdsKey(user),
@@ -515,6 +514,48 @@ public class AccessTokenUtility {
             keys.add(getEncryptedRefreshTokenUserIdMappingKey(refreshToken));
         }
         redisService.deleteAll(keys);
+    }
+
+    public void logoutFromDevices(UserModel user,
+                                  Set<String> deviceIds) throws Exception {
+        Set<String> keys = new HashSet<>();
+        String tempStr;
+        for (String encryptedDeviceId : deviceIds) {
+            if (encryptedDeviceId == null || encryptedDeviceId.isBlank()) {
+                continue;
+            }
+            try {
+                tempStr = genericAesStaticEncryptorDecryptor.decrypt(encryptedDeviceId);
+            } catch (Exception ex) {
+                continue;
+            }
+            keys.add(getEncryptedAccessTokenKey(
+                    user.getId(),
+                    tempStr
+            ));
+            redisService.removeZSetMember(
+                    getEncryptedDeviceIdsKey(user),
+                    encryptedDeviceId
+            );
+            redisService.removeHashMember(
+                    getEncryptedDeviceStatsKey(user),
+                    encryptedDeviceId
+            );
+            tempStr = getEncryptedRefreshTokenKey(
+                    user.getId(),
+                    tempStr
+            );
+            keys.add(tempStr);
+            tempStr = redisService.get(tempStr);
+            if (tempStr != null) {
+                tempStr = genericAesRandomEncryptorDecryptor.decrypt(tempStr);
+                keys.add(getEncryptedRefreshTokenMappingKey(tempStr));
+                keys.add(getEncryptedRefreshTokenUserIdMappingKey(tempStr));
+            }
+        }
+        if (!keys.isEmpty()) {
+            redisService.deleteAll(keys);
+        }
     }
 
     public void revokeTokens(Set<UserModel> users) throws Exception {
